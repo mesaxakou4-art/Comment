@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+{% block title %}WikiQuiz Live{% endblock %}
+{% block content %}
+<style>
+    .shell {
+        max-width: 480px;
+        margin: 0 auto;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 18px;
+        border-bottom: 2px solid var(--ink);
+    }
+    .topbar .brand {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.3px;
+    }
+    .topbar .brand span { color: var(--crimson); }
+    .my-score {
+        font-family: 'IBM Plex Mono', monospace;
+        background: var(--ink);
+        color: var(--paper);
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .content { flex: 1; padding: 18px; }
+
+    /* --- Modal pseudo --- */
+    #name-modal {
+        position: fixed; inset: 0;
+        background: rgba(32,29,24,0.88);
+        display: flex; align-items: center; justify-content: center;
+        z-index: 30;
+        padding: 20px;
+    }
+    .card {
+        background: var(--paper);
+        border: 2px solid var(--ink);
+        box-shadow: 6px 6px 0 var(--ink);
+        border-radius: 4px;
+        padding: 26px 22px;
+        width: 100%;
+        max-width: 340px;
+        text-align: center;
+    }
+    .card h2 { font-size: 22px; margin-bottom: 6px; }
+    .card p.sub { color: var(--ink-soft); font-size: 14px; margin: 4px 0 16px; }
+    .card input[type="text"] {
+        width: 100%;
+        padding: 12px 14px;
+        border: 2px solid var(--ink);
+        border-radius: 4px;
+        font-family: 'Inter', sans-serif;
+        font-size: 15px;
+        background: white;
+    }
+    .btn {
+        display: inline-block;
+        margin-top: 14px;
+        padding: 12px 20px;
+        background: var(--crimson);
+        color: var(--paper);
+        border: none;
+        border-radius: 4px;
+        font-weight: 700;
+        font-family: 'Inter', sans-serif;
+        cursor: pointer;
+        letter-spacing: 0.3px;
+    }
+    .btn:hover { filter: brightness(1.08); }
+    .btn.gold { background: var(--gold); color: var(--ink); }
+
+    /* --- Question card --- */
+    .stamp-tag {
+        display: inline-block;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 11px;
+        letter-spacing: 1px;
+        border: 1.5px solid var(--crimson);
+        color: var(--crimson);
+        padding: 3px 8px;
+        border-radius: 3px;
+        transform: rotate(-2deg);
+        margin-bottom: 12px;
+    }
+
+    .timer-ring {
+        width: 46px; height: 46px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'IBM Plex Mono', monospace;
+        font-weight: 600;
+        font-size: 15px;
+        color: var(--ink);
+        background: conic-gradient(var(--gold) calc(var(--pct, 100) * 1%), var(--paper-dark) 0);
+        border: 2px solid var(--ink);
+    }
+    .timer-ring span {
+        background: var(--paper);
+        width: 34px; height: 34px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+    }
+
+    .question-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 10px;
+    }
+
+    .snippet {
+        background: white;
+        border: 2px solid var(--ink);
+        border-radius: 4px;
+        padding: 16px;
+        font-family: 'Lora', Georgia, serif;
+        font-size: 16px;
+        line-height: 1.55;
+        color: var(--ink);
+        min-height: 120px;
+    }
+
+    .choices {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 14px;
+    }
+    .choice-btn {
+        border: 2px solid var(--ink);
+        background: var(--paper-dark);
+        border-radius: 6px;
+        padding: 14px 10px;
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        font-size: 14px;
+        text-align: left;
+        cursor: pointer;
+        transition: transform 0.1s ease;
+    }
+    .choice-btn:active { transform: scale(0.97); }
+    .choice-btn.picked { background: var(--gold); }
+    .choice-btn.correct { background: var(--forest); color: white; border-color: var(--forest); }
+    .choice-btn.wrong { background: var(--crimson); color: white; opacity: 0.55; text-decoration: line-through; }
+    .choice-btn[disabled] { cursor: default; }
+
+    .result-panel {
+        margin-top: 16px;
+        padding: 14px 16px;
+        border: 2px dashed var(--ink);
+        border-radius: 6px;
+        background: white;
+    }
+    .result-panel a {
+        color: var(--crimson);
+        font-weight: 600;
+        text-decoration: none;
+    }
+    .result-panel a:hover { text-decoration: underline; }
+
+    .leaderboard { margin-top: 18px; }
+    .leaderboard h3 { font-size: 15px; margin-bottom: 8px; letter-spacing: 0.3px; }
+    .leaderboard ol { list-style: none; padding: 0; margin: 0; counter-reset: rank; }
+    .leaderboard li {
+        counter-increment: rank;
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+        font-size: 14px;
+    }
+    .leaderboard li::before {
+        content: counter(rank) ".";
+        font-family: 'IBM Plex Mono', monospace;
+        margin-right: 8px;
+        color: var(--ink-soft);
+    }
+    .leaderboard li.me { background: var(--paper-dark); font-weight: 700; }
+    .leaderboard .pts { font-family: 'IBM Plex Mono', monospace; color: var(--crimson); }
+
+    .waiting { text-align: center; color: var(--ink-soft); margin-top: 40px; font-family: 'Lora', serif; }
+</style>
+
+<div id="name-modal">
+    <div class="card">
+        <span class="stamp-tag">JEU EN DIRECT</span>
+        <h2>WikiQuiz Live</h2>
+        <p class="sub">Devine l'article Wikipédia à partir de l'extrait. Le plus rapide gagne le plus de points.</p>
+        <input id="name-input" type="text" placeholder="Ton prénom" maxlength="20">
+        <br>
+        <button class="btn" onclick="joinGame()">Rejoindre la partie</button>
+    </div>
+</div>
+
+<div class="shell">
+    <div class="topbar">
+        <div class="brand">Wiki<span>Quiz</span> Live</div>
+        <div class="my-score" id="my-score">0 pts</div>
+    </div>
+
+    <div class="content">
+        <div id="waiting" class="waiting">⏳ En attente de la prochaine question...</div>
+
+        <div id="question-view" style="display:none">
+            <div class="question-header">
+                <span class="stamp-tag">DE QUEL ARTICLE S'AGIT-IL ?</span>
+                <div class="timer-ring" id="timer-ring" style="--pct:100"><span id="timer-text">15</span></div>
+            </div>
+            <div class="snippet" id="snippet"></div>
+            <div class="choices" id="choices"></div>
+        </div>
+
+        <div id="result-view" style="display:none">
+            <div class="result-panel">
+                <div style="font-weight:700; margin-bottom:6px;">✅ Réponse : <span id="correct-answer"></span></div>
+                <a id="article-link" href="#" target="_blank">En savoir plus sur Wikipédia →</a>
+            </div>
+            <div class="leaderboard">
+                <h3>🏆 Classement</h3>
+                <ol id="leaderboard-list"></ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+    var socket = io();
+    var myName = localStorage.getItem("wikiquiz_name");
+    var currentRoundId = null;
+    var hasAnswered = false;
+    var myScore = 0;
+    var timerInterval = null;
+
+    if (myName) {
+        document.getElementById("name-modal").style.display = "none";
+        socket.emit("join", { name: myName });
+    } else {
+        document.getElementById("name-input").focus();
+    }
+
+    function joinGame() {
+        var val = document.getElementById("name-input").value.trim();
+        if (!val) return;
+        myName = val;
+        localStorage.setItem("wikiquiz_name", myName);
+        document.getElementById("name-modal").style.display = "none";
+        socket.emit("join", { name: myName });
+    }
+
+    document.getElementById("name-input").addEventListener("keypress", function(e){
+        if (e.key === "Enter") joinGame();
+    });
+
+    function startTimer(duration) {
+        clearInterval(timerInterval);
+        var remaining = duration;
+        var ring = document.getElementById("timer-ring");
+        var text = document.getElementById("timer-text");
+
+        function tick() {
+            var pct = Math.max(0, (remaining / 15) * 100);
+            ring.style.setProperty("--pct", pct);
+            text.textContent = Math.ceil(remaining);
+            remaining -= 0.5;
+            if (remaining < 0) { clearInterval(timerInterval); }
+        }
+        tick();
+        timerInterval = setInterval(tick, 500);
+    }
+
+    socket.on("new_question", function(data){
+        currentRoundId = data.round_id;
+        hasAnswered = false;
+
+        document.getElementById("waiting").style.display = "none";
+        document.getElementById("result-view").style.display = "none";
+        document.getElementById("question-view").style.display = "block";
+
+        document.getElementById("snippet").textContent = data.snippet;
+
+        var box = document.getElementById("choices");
+        box.innerHTML = "";
+        data.choices.forEach(function(choice){
+            var btn = document.createElement("button");
+            btn.className = "choice-btn";
+            btn.textContent = choice;
+            btn.onclick = function(){ pickAnswer(choice, btn); };
+            box.appendChild(btn);
+        });
+
+        startTimer(data.duration);
+    });
+
+    function pickAnswer(choice, btnEl) {
+        if (hasAnswered) return;
+        hasAnswered = true;
+        document.querySelectorAll(".choice-btn").forEach(b => b.disabled = true);
+        btnEl.classList.add("picked");
+        socket.emit("answer", { round_id: currentRoundId, choice: choice });
+    }
+
+    socket.on("round_result", function(data){
+        clearInterval(timerInterval);
+        document.getElementById("question-view").style.display = "none";
+        document.getElementById("result-view").style.display = "block";
+
+        document.getElementById("correct-answer").textContent = data.correct;
+        document.getElementById("article-link").href = data.url;
+
+        document.querySelectorAll(".choice-btn").forEach(function(b){
+            if (b.textContent === data.correct) b.classList.add("correct");
+            else if (b.classList.contains("picked")) b.classList.add("wrong");
+        });
+
+        renderLeaderboard(data.leaderboard);
+    });
+
+    socket.on("leaderboard", function(data){
+        renderLeaderboard(data.leaderboard);
+    });
+
+    function renderLeaderboard(list) {
+        var ol = document.getElementById("leaderboard-list");
+        ol.innerHTML = "";
+        list.forEach(function(entry){
+            var li = document.createElement("li");
+            if (entry.name === myName) {
+                li.className = "me";
+                myScore = entry.score;
+                document.getElementById("my-score").textContent = myScore + " pts";
+            }
+            li.innerHTML = '<span>' + entry.name + '</span><span class="pts">' + entry.score + '</span>';
+            ol.appendChild(li);
+        });
+    }
+</script>
+{% endblock %}

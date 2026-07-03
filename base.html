@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}WikiQuiz Live{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --paper: #F3ECDD;
+            --paper-dark: #E8DEC6;
+            --ink: #201D18;
+            --ink-soft: #55503F;
+            --crimson: #A3242A;
+            --forest: #2F5233;
+            --gold: #C9A227;
+            --line: #D8CBAE;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: 'Inter', Arial, sans-serif;
+            background: var(--paper);
+            background-image:
+                repeating-linear-gradient(0deg, transparent, transparent 27px, var(--line) 28px);
+            color: var(--ink);
+            min-height: 100vh;
+        }
+        h1, h2, h3 { font-family: 'Lora', Georgia, serif; margin: 0; }
+        .mono { font-family: 'IBM Plex Mono', monospace; }
+    </style>
+</head>
+<body>
+    {% block content %}{% endblock %}
+</body>
+</html>
