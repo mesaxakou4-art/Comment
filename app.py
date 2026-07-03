@@ -17,7 +17,7 @@ WIKI_RANDOM_URL = f"https://{WIKI_LANG}.wikipedia.org/api/rest_v1/page/random/su
 HEADERS = {"User-Agent": "WikiQuizLive/1.0 (educational quiz game)"}
 
 ROUND_DURATION = 15   # secondes pour répondre
-REVEAL_DURATION = 6   # secondes d'affichage du résultat entre deux manches
+REVEAL_DURATION = 5   # secondes d'affichage du résultat avant la question suivante
 
 # ---------------- ÉTAT DU JEU (en mémoire, une seule partie globale) ----------------
 game_lock = threading.Lock()
@@ -121,6 +121,7 @@ def game_loop():
             "snippet": q["snippet"],
             "choices": q["choices"],
             "duration": ROUND_DURATION,
+            "round_duration": ROUND_DURATION,
         })
 
         socketio.sleep(ROUND_DURATION)
@@ -176,6 +177,7 @@ def handle_connect():
                     "snippet": state["question"]["snippet"],
                     "choices": state["question"]["choices"],
                     "duration": remaining,
+                    "round_duration": ROUND_DURATION,
                 })
         emit("leaderboard", {"leaderboard": leaderboard_snapshot()})
 
@@ -213,6 +215,25 @@ def handle_disconnect():
     with game_lock:
         state["sid_names"].pop(sid, None)
         state["answers"].pop(sid, None)
+
+
+@socketio.on("chat_message")
+def handle_chat_message(data):
+    name = state["sid_names"].get(request.sid, "Anonyme")
+    content = str((data or {}).get("content", ""))[:300]
+    if not content.strip():
+        return
+    safe_content = (
+        content
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+    socketio.emit("chat_message", {
+        "user": name,
+        "content": safe_content,
+        "time": time.time(),
+    })
 
 
 # ---------------- RUN ----------------

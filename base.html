@@ -21,10 +21,11 @@
         body {
             margin: 0;
             font-family: 'Inter', Arial, sans-serif;
-            background: var(--paper);
-            background-image:
-                repeating-linear-gradient(0deg, transparent, transparent 27px, var(--line) 28px);
-            color: var(--ink);
+            background:
+                linear-gradient(180deg, rgba(20,16,10,0.72) 0%, rgba(20,16,10,0.85) 100%),
+                url('/static/bg.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: var(--paper);
             min-height: 100vh;
         }
         h1, h2, h3 { font-family: 'Lora', Georgia, serif; margin: 0; }

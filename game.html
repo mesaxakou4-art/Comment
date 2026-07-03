@@ -15,12 +15,15 @@
         align-items: center;
         justify-content: space-between;
         padding: 16px 18px;
-        border-bottom: 2px solid var(--ink);
+        border-bottom: 2px solid var(--gold);
+        background: rgba(20,16,10,0.35);
+        backdrop-filter: blur(4px);
     }
     .topbar .brand {
         font-size: 20px;
         font-weight: 700;
         letter-spacing: 0.3px;
+        color: var(--paper);
     }
     .topbar .brand span { color: var(--crimson); }
     .my-score {
@@ -186,10 +189,76 @@
         margin-right: 8px;
         color: var(--ink-soft);
     }
-    .leaderboard li.me { background: var(--paper-dark); font-weight: 700; }
+    .leaderboard li.me { background: var(--paper-dark); font-weight: 700; color: var(--ink); border-radius: 4px; }
     .leaderboard .pts { font-family: 'IBM Plex Mono', monospace; color: var(--crimson); }
 
-    .waiting { text-align: center; color: var(--ink-soft); margin-top: 40px; font-family: 'Lora', serif; }
+    .waiting { text-align: center; color: var(--paper); opacity: 0.85; margin-top: 40px; font-family: 'Lora', serif; }
+
+    /* --- Chat en direct --- */
+    .chat-panel {
+        margin-top: 20px;
+        background: rgba(20,16,10,0.55);
+        backdrop-filter: blur(6px);
+        border: 1px solid rgba(242,236,221,0.25);
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .chat-panel h3 {
+        font-size: 14px;
+        color: var(--paper);
+        padding: 10px 14px;
+        margin: 0;
+        border-bottom: 1px solid rgba(242,236,221,0.2);
+        letter-spacing: 0.3px;
+    }
+    .chat-messages {
+        max-height: 180px;
+        overflow-y: auto;
+        padding: 10px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .chat-line {
+        font-size: 13px;
+        color: var(--paper);
+        line-height: 1.4;
+    }
+    .chat-line .who {
+        font-weight: 700;
+        color: var(--gold);
+        margin-right: 4px;
+    }
+    .chat-form {
+        display: flex;
+        gap: 8px;
+        padding: 10px 12px;
+        border-top: 1px solid rgba(242,236,221,0.2);
+    }
+    .chat-form input[type="text"] {
+        flex: 1;
+        margin: 0;
+        border-radius: 20px;
+        padding: 10px 14px;
+        border: 1px solid rgba(242,236,221,0.3);
+        background: rgba(255,255,255,0.08);
+        color: var(--paper);
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+    }
+    .chat-form input[type="text"]::placeholder { color: rgba(242,236,221,0.5); }
+    .chat-form button {
+        margin: 0;
+        padding: 10px 16px;
+        border-radius: 20px;
+        border: none;
+        background: var(--gold);
+        color: var(--ink);
+        font-weight: 700;
+        cursor: pointer;
+    }
 </style>
 
 <div id="name-modal">
@@ -229,6 +298,15 @@
             <div class="leaderboard">
                 <h3>🏆 Classement</h3>
                 <ol id="leaderboard-list"></ol>
+            </div>
+        </div>
+
+        <div class="chat-panel">
+            <h3>💬 Chat en direct</h3>
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-form">
+                <input type="text" id="chat-input" placeholder="Écris un message...">
+                <button onclick="sendChat()">➤</button>
             </div>
         </div>
     </div>
@@ -345,5 +423,31 @@
             ol.appendChild(li);
         });
     }
+
+    function sendChat() {
+        var input = document.getElementById("chat-input");
+        var text = input.value.trim();
+        if (!text) return;
+        if (!myName) { document.getElementById("name-modal").style.display = "flex"; return; }
+        socket.emit("chat_message", { content: text });
+        input.value = "";
+    }
+
+    document.getElementById("chat-input").addEventListener("keypress", function(e){
+        if (e.key === "Enter") sendChat();
+    });
+
+    socket.on("chat_message", function(data){
+        var box = document.getElementById("chat-messages");
+        var line = document.createElement("div");
+        line.className = "chat-line";
+        var who = document.createElement("span");
+        who.className = "who";
+        who.textContent = data.user + ":";
+        line.appendChild(who);
+        line.appendChild(document.createTextNode(data.content));
+        box.appendChild(line);
+        box.scrollTop = box.scrollHeight;
+    });
 </script>
 {% endblock %}
